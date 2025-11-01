@@ -1,1 +1,66 @@
+КОНТЕКСТ АРХИТЕКТУРЫ:
+- UDE v5.1.2 Enterprise Hardened (ARCHITECTURE.md разделы 0-1)
+- Полный продакшен стек (TECH_STACK.md)
 
+ТЕХНИЧЕСКОЕ ЗАДАНИЕ:
+Создать МОДУЛЬ PLATFORM - ядро системы с фокусом на multi-tenancy
+
+ТРЕБУЕМЫЕ КОМПОНЕНТЫ:
+
+1. DDL МИГРАЦИИ (PostgreSQL 15+):
+   - tenants (tenant_id, name, domain, status)
+   - user_profiles (user_id, tenant_id, email, role, behavioral_hash)
+   - session_management (session_id, user_id, device_fingerprint, risk_score)
+   - system_configurations (config_key, config_value, environment)
+   - schema_migrations (version, checksum, rollback_script)
+   - RLS политики на ВСЕ таблицы с tenant_id
+   - Индексы по ВСЕМ внешним ключам и часто используемым полям
+
+2. API (FastAPI 0.110.0+):
+   - POST /tenants - создание tenant с валидацией domain uniqueness
+   - GET /tenants/{tenant_id} - получение tenant с RLS проверкой
+   - POST /users - регистрация пользователя с хешированием пароля
+   - POST /sessions - создание сессии с device fingerprint
+   - GET /configs/{config_key} - получение конфигурации с environment
+
+3. БИЗНЕС-ЛОГИКА:
+   - Multi-tenancy через RLS (Row Level Security)
+   - Автоматическое применение tenant_id из JWT токена
+   - Валидация email и domain uniqueness
+   - Хеширование паролей (bcrypt)
+   - Device fingerprinting для сессий
+
+4. ТЕХНОЛОГИИ (СТРОГО ПО TECH_STACK.md):
+   - Python 3.11.7+
+   - FastAPI 0.110.0+ с автоматической OpenAPI документацией
+   - SQLAlchemy 2.0.25+ с async поддержкой
+   - Alembic 1.13.0+ для миграций
+   - Pydantic v2.5+ для валидации
+   - JWT аутентификация
+   - PostgreSQL 15+ с RLS
+
+5. ТЕСТЫ (ОБЯЗАТЕЛЬНО):
+   - Unit tests для всех моделей (pytest, coverage >=80%)
+   - Integration tests для API endpoints
+   - Тесты на изоляцию tenantов (RLS)
+   - Тесты валидации и ошибок
+
+ТРЕБОВАНИЯ КАЧЕСТВА:
+- 100% соответствие ARCHITECTURE.md разделы 0-1
+- Все таблицы должны иметь RLS политики
+- Все API endpoints должны иметь авторизацию
+- Все миграции должны быть reversible
+- Код должен проходить black, flake8, mypy
+
+НЕ ДЕЛАТЬ:
+- Event-driven компоненты (это следующий модуль)
+- Quantum компоненты (это отдельный модуль) 
+- UI/админку (это отдельный модуль)
+- Anything beyond строго заданного scope
+
+ВЫХОДНЫЕ АРТЕФАКТЫ:
+1. Полные DDL миграции в /ddl/001_platform_core.sql
+2. FastAPI сервис в /modules/platform/
+3. Полные тесты в /modules/platform/tests/
+4. Dockerfile и docker-compose для локального запуска
+5. README с инструкцией запуска и тестирования
