@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
+import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime, timedelta
 import time  # Для симуляции реал-тайм
@@ -16,7 +16,7 @@ st.set_page_config(
 st.markdown("""
 <style>
     .stApp {background-color: #f8f9fa;}
-    div[data-testid="stMetric"], div.stDataFrame, div.stPlotlyChart, .stExpander, .stTextInput, .stMultiselect {background-color: #ffffff; border-radius: 8px; padding: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);}
+    div[data-testid="stMetric"], div.stDataFrame, .stExpander, .stTextInput, .stMultiselect {background-color: #ffffff; border-radius: 8px; padding: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);}
     [data-testid="stMetricValue"] {color: #4361ee; font-weight: bold;}
     .science-label {background-color: #eef2ff; color: #4361ee; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; font-style: italic; margin-top: 5px; display: inline-block;}
     [data-testid="stSidebar"] {background-color: #ffffff; border-right: 1px solid #eee;}
@@ -130,8 +130,9 @@ with st.sidebar:
     if role in ["owner", "senior_manager"]:
         ai_traffic = st.slider("% трафика на ИИ", 0, 100, 50)
         confidence_threshold = st.slider("Порог эскалации (confidence)", 0.0, 1.0, 0.85, step=0.05)
+        st.divider()
 
-# --- 5. УВЕДОМЛЕНИЯ (реал-тайм симуляция) ---
+# --- 5. УВЕДОМЛЕНИЯ ---
 if len(df_dialogs[df_dialogs["Status"] == "Неотвечено"]) > 0:
     st.markdown("<div class='notification'>Новый неотвеченный диалог! (Эскалация)</div>", unsafe_allow_html=True)
 
@@ -183,6 +184,10 @@ if page == "Inbox (Живой чат)":
         with col_btn2:
             if st.button("Взять в работу"):
                 st.success("Диалог взят в работу")
+        st.divider()
+        st.subheader("Детали диалога")
+        st.metric("Confidence ИИ", row["AI_Confidence"])
+        st.markdown(f"<p class='science-label'>На основе {row['Science_Label']}</p>", unsafe_allow_html=True)
 
 elif page == "Аналитика":
     st.header("Аналитика")
@@ -202,18 +207,24 @@ elif page == "Аналитика":
     col_left, col_right = st.columns(2)
     with col_left:
         st.subheader("Динамика выручки")
-        fig_line = px.line(df_analytics, x="Дата", y=["Выручка с ИИ", "Выручка без ИИ"], color_discrete_sequence=["#4361ee", "#b0c4de"])
-        st.plotly_chart(fig_line, use_container_width=True)
+        fig, ax = plt.subplots()
+        ax.plot(df_analytics["Дата"], df_analytics["Выручка с ИИ"], label="Выручка с ИИ", color="#4361ee")
+        ax.plot(df_analytics["Дата"], df_analytics["Выручка без ИИ"], label="Выручка без ИИ", color="#b0c4de")
+        ax.legend()
+        st.pyplot(fig)
         st.markdown("<p class='science-label'>Каузальный вывод на основе DoWhy (p-value < 0.05)</p>", unsafe_allow_html=True)
     with col_right:
         st.subheader("Распределение источников")
         sources = df_dialogs.groupby("Source").size().reset_index(name="Count")
-        fig_pie = px.pie(sources, values="Count", names="Source", hole=0.3, color_discrete_sequence=["#4361ee", "#06d6a0", "#ffd166", "#ef476f"])
-        st.plotly_chart(fig_pie, use_container_width=True)
+        fig, ax = plt.subplots()
+        ax.pie(sources["Count"], labels=sources["Source"], autopct='%1.1f%%', colors=["#4361ee", "#06d6a0", "#ffd166", "#ef476f"])
+        st.pyplot(fig)
     st.subheader("Топ жалоб")
     complaints = df_dialogs.groupby("Message").size().reset_index(name="Count").sort_values("Count", ascending=False).head(10)
-    fig_bar = px.bar(complaints, x="Message", y="Count", color_discrete_sequence=["#4361ee"])
-    st.plotly_chart(fig_bar, use_container_width=True)
+    fig, ax = plt.subplots()
+    ax.bar(complaints["Message"], complaints["Count"], color="#4361ee")
+    ax.tick_params(axis='x', rotation=45)
+    st.pyplot(fig)
     st.markdown("<p class='science-label'>Анализ BIS/BAS</p>", unsafe_allow_html=True)
 
 elif page == "Методология":
@@ -228,12 +239,12 @@ elif page == "Методология":
         st.text_area("Скрипт", "Пример для отзывов...")
         st.markdown("<p class='science-label'>На основе теории диссонанса</p>", unsafe_allow_html=True)
     st.subheader("Предложения ИИ")
-    suggestions_df = pd.DataFrame({
+    suggestions = pd.DataFrame({
         "Предложение": ["Новая фраза для возражений"],
         "Теория": ["Чалдини"],
         "Эффект": ["+15% конверсия"]
     })
-    st.dataframe(suggestions_df)
+    st.dataframe(suggestions)
     if role in ["owner", "senior_manager"]:
         st.button("Одобрить выбранные")
 
@@ -246,6 +257,6 @@ elif page == "Команда":
         col_name.text_input("ФИО")
         col_email.text_input("Email")
         col_role.selectbox("Роль", ["agent", "sales"])
-        st.button("Отправить приглашение") 
+        st.button("Отправить приглашение")
 
 st.caption("CSP • Cognitive Symbiosis Platform © 2025")
