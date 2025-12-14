@@ -1,4 +1,3 @@
-```python
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -250,4 +249,3 @@ elif page == "Команда":
         st.button("Отправить приглашение") 
 
 st.caption("CSP • Cognitive Symbiosis Platform © 2025")
-```
